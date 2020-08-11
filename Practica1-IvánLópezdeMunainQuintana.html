@@ -1,0 +1,742 @@
+<!-- 
+  
+Entrega práctica 1, Iván López de Munain Quintana
+Programación de Aplicaciones Gráficas
+
+    -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Práctica 1 - Iván López de Munain</title>
+<style>
+        body{ background-color: rgb(189, 255, 249); }
+      canvas{ background-color: white;
+              border: 1.5px solid black;
+              }
+         div{ display:block;
+    }
+
+   .slider {
+  -webkit-appearance: none;
+  width: 20%;
+  height: 12px;
+  border-radius: 5px;
+  background: #d3d3d3;
+  opacity: 0.7; 
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgb(187, 45, 111);
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgb(187, 45, 111);
+  cursor: pointer;
+}
+                            
+
+</style>
+
+
+<script>
+
+  // ****************** Variables Globales
+  var   gl = null,
+        canvas = null,
+        glProgram = null,
+        fragmentShader = null,
+        vertexShader = null;
+  var   positionLocatAttrib =null,
+        verticeBuffer = null;
+  var   vertices=null; //coord de los vértices
+        
+  var   indexVerticeBuffer=null;
+  var   indVertices; //indices de los triangulos
+
+
+  var movimiento_x = 0;
+  var movimiento_y = 0;
+  var rotacion = 0;
+  var escaladoX = 1.0;
+  var escaladoY = 1.0;
+  var color = 0.0;
+
+
+  
+
+      
+/********************* 1. INIT WEBGL **************************************/ 
+function initWebGL()
+      {
+        canvas = document.getElementById("canvas");         
+        gl = canvas.getContext("webgl");
+                
+        if(gl)
+        {
+          setupWebGL();
+          initShaders();
+          (function animLoop(){
+            setupDynamicBuffers();
+            drawScene();
+            requestAnimationFrame(animLoop, canvas); //vuelve a llamar a animLoop para que repinte, no tiene fin hasta que se cierre la pagina web
+          })();  
+        } 
+        else{  
+          alert(  "El navegador no soporta WEBGL.");
+        }
+      }
+      /********************* 2.setupWEBGL **************************************/ 
+      function setupWebGL()
+      {
+        //Pone el color de fondo a blanco 
+        gl.clearColor(1.0, 1.0, 1.0, 1.0);  
+        gl.clear(gl.COLOR_BUFFER_BIT);  
+        
+        //Crea un viewport del tamaño del canvas
+        gl.viewport(0, 0, canvas.width, canvas.height);
+
+
+      }
+      /********************* 3. INIT SHADER **************************************/ 
+      function initShaders()
+      {
+       // Esta función inicializa los shaders
+       
+        //1.Obtengo la referencia de los shaders 
+        var fs_source = document.getElementById('fragment-shader').innerHTML;
+        var vs_source = document.getElementById('vertex-shader').innerHTML;
+
+        //2. Compila los shaders  
+        vertexShader = makeShader(vs_source, gl.VERTEX_SHADER);
+        fragmentShader = makeShader(fs_source, gl.FRAGMENT_SHADER);
+        
+          //3. Crea un programa
+          glProgram = gl.createProgram();
+        
+        //4. Adjunta al programa cada shader
+          gl.attachShader(glProgram, vertexShader);
+          gl.attachShader(glProgram, fragmentShader);
+          gl.linkProgram(glProgram);
+
+        if (!gl.getProgramParameter(glProgram, gl.LINK_STATUS)) {
+           alert("No se puede inicializar el Programa .");
+          }
+        
+        //5. Usa el programa
+        gl.useProgram(glProgram);
+      }
+     /********************* 3.1. MAKE SHADER **************************************/ 
+      function makeShader(src, type)
+      {
+        //Compila cada  shader
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+              alert("Error de compilación del shader: " + gl.getShaderInfoLog(shader));
+          }
+        return shader;
+      }
+
+     /********************* 4 SETUP BUFFERS  **************************************/ 
+      
+      function setupDynamicBuffers()
+      {  
+
+          vertices = [ 
+          
+   
+          -0.45, -0.85, //0
+          -0.3, -0.5, //1
+          -0.15, -0.85, //2
+          0.0, -0.5, //3
+           -0.1, -0.6, //4
+           0.00 ,-0.55,//5
+           0.1,-0.55, //6
+           0.05,-0.55, //7
+           0.15, -0.6, //8
+           0.1, -0.57,//9
+           0.13, -0.855, //10
+           0.15, -0.86, //11
+           0.17, -0.87, //12
+           0.19, -0.85, //13
+           0.21, -0.81, //14
+           0.23, -0.78, //15
+           0.25, -0.74, //16
+           0.27, -0.7, //17
+           0.29, -0.66, //18
+           0.31, -0.62, //19
+           0.33, -0.58, //20
+           0.345, -0.54, //21
+           0.36, -0.5, //22
+
+          0.0, -0.5, //23
+          -0.27, -0.47, //24
+          -0.24, -0.45, //25
+          -0.2, -0.44, //26
+          0.15, -0.44, //27
+          0.2, -0.43, //28
+          0.21, -0.42, //29
+          0.22, -0.4, //30
+          0.23, -0.38, //31
+          0.27, -0.48, //32 soporte
+          0.235, -0.35, //33
+          0.235, 0.3, //34  palo recto
+          0.23, -0.38, //35
+
+          //PARTE DERECHA
+          0.368, -0.46, //36
+          0.368, -0.42, //37
+          0.368, -0.4, //38
+          0.32, -0.39, //39
+          0.31, 0.3, //40  palo recto
+           
+           //CABEZA DCH
+            0.32, 0.31, //41
+            0.33, 0.32, //42
+            0.34, 0.33, //43
+            0.33, 0.32, //44
+            0.36, 0.365, //45
+            0.365, 0.38, //46
+            0.368, 0.4, //47
+            0.37, 0.42, //48
+            0.375, 0.44, //49
+            0.38, 0.55, //50
+            0.38, 0.6, //51
+            0.375, 0.65, //52
+            0.3, 0.4, //53  soporte
+            0.37, 0.67, //54
+            0.353, 0.7, //55
+            0.34, 0.705, //56
+            0.33, 0.707, //57
+            0.31, 0.71, //58
+            0.05, 0.70, //59
+            0.05,0.4, //60 relleno
+
+           //CABEZA IZQ
+           0.225, 0.315, //61
+           0.215, 0.32, //62
+           0.21, 0.325, //63
+           0.205, 0.33, //64
+           0.1, 0.345, //65
+           0.07, 0.35, //66
+           0.05, 0.365, //67
+           0.04, 0.38, //68
+           0.035, 0.4, //69
+           0.03, 0.65, //70
+           0.035, 0.7, //71
+           0.045, 0.725, //72
+           0.055, 0.74, //73
+           0.06, 0.755, //74
+           0.065, 0.77, //75
+           0.07, 0.785, //76
+           0.0725, 0.8, //77
+           0.08, 0.82, //78
+           0.1, 0.825, //79
+           0.12, 0.823, //80
+           0.25, 0.7155, // 81
+           0.225, 0.725, // 82
+           0.2, 0.73, // 83
+           0.175, 0.74, // 84
+           0.125, 0.83, // 85
+
+           //RETOQUES
+           0.145, -0.865, //86
+           0.172, -0.875, //87
+           0.05, -0.52,//88
+           0.105, -0.60,//89
+
+        ];
+
+        //Buffer que almacena los vértices
+       verticeBuffer = gl.createBuffer();
+       gl.bindBuffer(gl.ARRAY_BUFFER, verticeBuffer);
+       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW); 
+      
+    
+       indVertices=[
+        //Triangulo1
+        0,1,2,
+        //Triangulo2
+         1,2,3,
+        //Triangulo3
+        5,3,4,
+        //Triangulo4
+        3,5,6,
+        //Triangulo5
+        7,8,6,
+        //Triangulo6
+        9,10,8,
+        //triangulo7
+        10,8,11,
+        //triangulo8
+        11,8,12,
+        //triangulo9
+        12,8,13,
+        //triangulo10
+        14,8,13,
+        //triangulo11
+        15,8,14,
+        //triangulo12
+        15,8,16,
+        //triangulo13
+        16,8,17,
+        //triangulo14
+        17,8,18,
+        //triangulo15
+        18,8,19,
+        //triangulo16
+        19,8,20,
+        //triangulo17
+        20,8,21,
+        //triangulo18
+        21,3,22,
+        //triangulo 19
+        21,3,8,
+
+        //triangulo 20
+          1,23,24,
+        //triangulo 21
+        23,24,25,
+        //triangulo 22
+        26,23,25,
+        //triangulo 23
+        26,27,23,
+        //triangulo 24
+        22,27,23,
+        //triangulo 25
+        22,27,23,
+        //triangulo 26
+        22,27,28,
+        //triangulo 27
+        22,29,28,
+        //triangulo 28
+        22,29,30,
+        //triangulo 29
+        32,31,30,
+        //triangulo 30
+        32,31,33,
+        //triangulo 31
+        32,34,33,
+
+
+        //PARTE DCH
+        //triangulo 32
+        22,32,36,
+        //triangulo 33
+        37,32,36,
+        //triangulo 34
+        37,32,38,
+        //triangulo 35
+        39,32,38,
+        //triangulo 36
+        40,32,38,
+        //triangulo 37
+        40,32,34,
+        //triangulo 38
+        40,34,41,
+        //triangulo 39
+        42,34,41,
+        //triangulo 40
+        43,34,42,
+        //triangulo 41
+        43,34,44,
+        //triangulo 41
+        45,34,44,
+        //triangulo 42
+        45,34,46,
+        //triangulo 43
+        47,34,46,
+        //triangulo 44
+        48,34,47,
+        //triangulo 45
+        48,34,49,
+        //triangulo 46
+        50,34,49,
+        //triangulo 47
+        50,34,51,
+        //triangulo 48
+        53,52,51,
+        //triangulo 49
+        53,52,54,
+        //triangulo 50
+        55,53,54,
+        //triangulo 51
+        55,53,56,
+        //triangulo 52
+        57,53,56,
+        //triangulo 53
+        57,53,58,
+        //triangulo 53
+        59,53,58,
+        //triangulo 54
+        59,53,60,
+        //triangulo 55
+        34,53,61,
+        //triangulo 56
+        61,53,62,
+        //triangulo 57
+        63,53,62,
+        //triangulo 58
+        63,53,64,
+        //triangulo 59
+        65,53,64,
+        //triangulo 60
+        65,53,60,
+        //triangulo 61
+        65,66,55,
+        //triangulo 62
+        67,66,55,
+        //triangulo 63
+        67,68,55,
+        //triangulo 64
+        69,68,55,
+        //triangulo 65
+        69,70,55,
+        //triangulo 66
+        71,70,55,
+        //triangulo 66
+        71,72,34,
+        //triangulo 67
+        73,72,34,
+        //triangulo 68
+        73,74,34,
+        //triangulo 69
+        75,74,34,
+        //triangulo 70
+        75,76,34,
+        //triangulo 71
+        77,76,34,
+        //triangulo 72
+        77,78,34,
+        //triangulo 73
+        79,78,63,
+        //triangulo 74
+        79,80,63,
+        //triangulo 75
+        34,81,58,
+        //triangulo 76
+        34,82,58,
+        //triangulo 77
+        34,83,82,
+        //triangulo 78
+        34,83,84,
+        //triangulo 79
+        60,80,84,
+        //triangulo 80
+        34,80,84,
+        //triangulo 81
+        10,86,11,
+        //triangulo 82
+        87,86,11,
+        //triangulo 83
+        88,89,22
+       ];
+
+      
+
+        //BUFFER PARA IBO
+        indexVerticeBuffer = gl.createBuffer();
+        //Longitud del buffer
+        indexVerticeBuffer.number_vertex_points=indVertices.length;
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexVerticeBuffer);
+       
+       
+        // INDICES
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indVertices), gl.DYNAMIC_DRAW); 
+        
+        //BUFFER PARA ATRIBUTO POSICION DE VERTICES
+        positionLocatAttrib = gl.getAttribLocation(glProgram, "aVertexPosition");
+        gl.enableVertexAttribArray(positionLocatAttrib);
+
+        //Enlazo con las posiciones de los vértices
+        gl.bindBuffer(gl.ARRAY_BUFFER, verticeBuffer);
+        gl.vertexAttribPointer(positionLocatAttrib, 2, gl.FLOAT, false, 0, 0);
+
+        // Se la recuerda que utilice los indices de arrays
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexVerticeBuffer);
+
+        
+        
+        //TRASLACION
+        var uTraslacionx = gl.getUniformLocation(glProgram, "uTraslacionx");
+        gl.uniform1f(uTraslacionx, movimiento_x);
+
+        var uTraslaciony = gl.getUniformLocation(glProgram, "uTraslaciony");
+        gl.uniform1f(uTraslaciony, movimiento_y);
+
+        //ROTACION
+        var radian = Math.PI * rotacion / 180.0; 
+        var cosB = Math.cos(radian);
+        var sinB = Math.sin(radian);
+
+        ucosB = gl.getUniformLocation(glProgram, "ucosB");
+        usinB = gl.getUniformLocation(glProgram, "usinB");
+        
+        gl.uniform1f(ucosB, cosB);
+        gl.uniform1f(usinB, sinB);
+
+        //ESCALADO
+        var MatrixEscalado = new Float32Array([
+                escaladoX, 0.0, 0.0, 0.0,
+                0.0, escaladoY, 0.0, 0.0,
+                0.0,  0.0, 1.0, 0.0,
+                0.0,  0.0, 0.0, 1.0
+            ]);
+
+          
+          var uMatrixEscalado = gl.getUniformLocation(glProgram, 'uMatrixEscalado');
+          gl.uniformMatrix4fv(uMatrixEscalado, false, MatrixEscalado);
+
+
+        
+      //COLORES
+
+      var colorVertices=[];
+      for(i=0; i<=(89*3);i=i+3){
+        colorVertices[i]=(i+color*255)/(89*3);
+        colorVertices[i+1]=0.0;
+        colorVertices[i+2]=(i+color*255)/(89*3);
+      }
+
+        //BUFFER COLORES
+        var bufferColores = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufferColores);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorVertices), gl.DYNAMIC_DRAW); 
+
+        var colorLocatAttrib = gl.getAttribLocation(glProgram, "aVertexColor");
+        gl.enableVertexAttribArray(colorLocatAttrib);
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufferColores);
+        gl.vertexAttribPointer(colorLocatAttrib, 3, gl.FLOAT, false, 0, 0);
+
+
+      }  
+
+
+/********************* Draw Scene        *********************************** */
+       function drawScene(){
+
+            gl.drawElements(gl.TRIANGLES, indexVerticeBuffer.number_vertex_points, gl.UNSIGNED_SHORT,0);
+
+          }
+
+</script>
+<!-- ****************   VERTEX SHADER *******************-->
+<script id="vertex-shader" type="x-shader/x-vertex">
+
+attribute vec2 aVertexPosition;
+attribute vec3 aVertexColor;
+
+varying highp vec4 vColor;
+
+uniform mat4 uMatrixEscalado;
+
+uniform float ucosB, usinB, uTraslacionx, uTraslaciony;
+
+
+void main() {
+
+  gl_Position = uMatrixEscalado * vec4(aVertexPosition.x  * ucosB - aVertexPosition.y * usinB + uTraslacionx,
+                                       aVertexPosition.x  * usinB + aVertexPosition.y  * ucosB + uTraslaciony,
+                                        0.0,
+                                        1.0);
+
+
+  gl_PointSize=10.0; //TAMAÑO DEL PUNTO
+
+  vColor= vec4(aVertexColor,1.0);
+   
+}
+</script>
+<!-- ****************   FRAGMENT SHADER *******************-->
+<script id="fragment-shader" type="x-shader/x-fragment">
+
+  varying  highp vec4 vColor;
+
+void main() {
+
+   gl_FragColor = vColor;
+}
+</script>
+
+</head>
+<body onload="initWebGL()">
+<h1> Práctica 1 - Letra guímel </h1>
+<canvas id="canvas" width="400" height="350"></canvas>
+<div class="slidecontainer">
+  <input   type="range" min="0" max="255" value="50" class="slider" id="mysliderColor">
+   Variación color:<span id="demo6"></span>
+</div>
+<div class="slidecontainer">
+  <input type="range" min="-220" max="250" value="0" class="slider" id="mysliderX">
+   Traslación X: <span id="demo1"></span>
+</div>
+<div class="slidecontainer">
+  <input type="range" min="-51" max="58" value="0" class="slider" id="mysliderY">
+  Traslación Y: <span id="demo2"></span>
+</div>
+<div class="slidecontainer">
+  <input type="range" min="-360" max="360" value="0" class="slider" id="mysliderRotacion">
+  Rotación: <span id="demo3"></span>
+</div>
+
+<div class="slidecontainer">
+  <input type="range" min="1" max="10" value="5" class="slider" id="mysliderEscalado">
+  Escalado cte X e Y: <span id="demo7"></span>
+</div>
+
+
+<div class="slidecontainer">
+  <input type="range" min="1" max="10" value="5" class="slider" id="mysliderEscaladoX">
+  Escalado X: <span id="demo4"></span>
+</div>
+
+<div class="slidecontainer">
+  <input type="range" min="1" max="10" value="5" class="slider" id="mysliderEscaladoY">
+  Escalado Y: <span id="demo5"></span</p>
+</div>
+
+<script>
+
+
+  //Slider 1
+  var sliderX = document.getElementById("mysliderX");
+  var output1 = document.getElementById("demo1");
+  output1.innerHTML = sliderX.value; 
+  sliderX.oninput = function() {
+    output1.innerHTML = this.value;
+  }
+
+  var movimiento_x = sliderX.value/255;
+
+  sliderX.addEventListener('input', function(){
+      movimiento_x = sliderX.value/400;
+      setupDynamicBuffers();
+});
+
+
+ //Slider2
+  var sliderY = document.getElementById("mysliderY");
+  var output2 = document.getElementById("demo2");
+  output2.innerHTML = sliderY.value; 
+  sliderY.oninput = function() {
+    output2.innerHTML = this.value;
+  }
+  var movimiento_y = sliderY.value/350;
+
+  sliderY.addEventListener('input', function(){
+      movimiento_y = sliderY.value/350;
+      setupDynamicBuffers();
+});
+
+
+//Slider3
+  var sliderRotacion = document.getElementById("mysliderRotacion");
+  var output3 = document.getElementById("demo3");
+  output3.innerHTML = sliderRotacion.value; 
+  sliderRotacion.oninput = function() {
+    output3.innerHTML = this.value;
+  }
+
+  var rotacion = sliderRotacion.value;
+
+  sliderRotacion.addEventListener('input', function(){
+        rotacion = sliderRotacion.value;
+        setupDynamicBuffers();
+  });
+
+  //Slider4
+  var sliderEscaladoX = document.getElementById("mysliderEscaladoX");
+  var output4 = document.getElementById("demo4");
+  output4.innerHTML = sliderEscaladoX.value/5; 
+  sliderEscaladoX.oninput = function() {
+    output4.innerHTML = this.value/5;
+  }
+
+  var escaladoX = sliderEscaladoX.value/5;
+
+  sliderEscaladoX.addEventListener('input', function(){
+      escaladoX = sliderEscaladoX.value/5;
+      setupDynamicBuffers();
+});
+
+
+  //Slider5
+  var sliderEscaladoY = document.getElementById("mysliderEscaladoY");
+  var output5 = document.getElementById("demo5");
+  output5.innerHTML = sliderEscaladoY.value/5; 
+  sliderEscaladoY.oninput = function() {
+    output5.innerHTML = this.value/5;
+  }
+
+  var escaladoY = sliderEscaladoY.value/5;
+
+  sliderEscaladoY.addEventListener('input', function(){
+      escaladoY = sliderEscaladoY.value/5;
+      setupDynamicBuffers();
+});
+
+  //Slider6
+  var sliderColor = document.getElementById("mysliderColor");
+  var output6 = document.getElementById("demo6");
+  output6.innerHTML = sliderColor.value; 
+  sliderColor.oninput = function() {
+    output6.innerHTML = this.value;
+  }
+
+  var color = sliderColor.value/255;
+
+  sliderColor.addEventListener('input', function(){
+      color = sliderColor.value/255;
+      setupDynamicBuffers();
+});
+
+
+  //Slider7
+  var sliderEscalado= document.getElementById("mysliderEscalado");
+  var output7 = document.getElementById("demo7");
+  output7.innerHTML = sliderEscalado.value/5; 
+  sliderEscalado.oninput = function() {
+    output7.innerHTML = this.value/5;
+
+    //esto se debe a que optado por la opción de que si se escala de forma cte en X e Y considero que tiene
+    //más sentido que se haga respecto la figura inicial, en vez de sobre la figura ya escalada en solo un eje
+    //por lo que asigno los valores iniciales de escalado (que es 1, 5/5)
+
+    sliderEscaladoX.value=5;
+    output5.innerHTML =1;
+    sliderEscaladoY.value=5;
+    output4.innerHTML =1;
+
+  }
+  
+
+  sliderEscalado.addEventListener('input', function(){
+      escaladoX = sliderEscalado.value/5;
+      escaladoY = sliderEscalado.value/5;
+      setupDynamicBuffers();
+});
+  
+</script>
+
+</body>
+</html>
+
+
